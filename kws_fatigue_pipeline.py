@@ -53,7 +53,7 @@ FATIGUE_FRAME_LEN = vf.FRAME_LEN
 # Индексы 18 признаков (fallback, если нет fatigue_selected_18_indices.npy)
 FATIGUE_SELECTED_INDICES_DEFAULT: List[int] = [41, 7, 40, 2, 39, 5, 0, 6, 8, 10, 42, 12, 3, 9, 1, 11, 4, 13]
 
-FATIGUE_CLASS_NAMES = {0: "нет усталости", 1: "слабая усталость", 2: "сильная усталость"}
+FATIGUE_CLASS_NAMES = {0: "нет утомления", 1: "слабое утомление", 2: "сильное утомление"}
 FATIGUE_REPORT_CONFIDENCE_THRESHOLD = 0.5  # порог уверенности для формулировок и остановки
 
 _PIPELINE_DIR = Path(__file__).resolve().parent
@@ -64,7 +64,7 @@ DEFAULT_FATIGUE_INDICES = _PIPELINE_DIR / "fatigue_selected_18_indices.npy"
 
 @dataclass
 class FatigueAssets:
-    """Загруженная модель усталости, скейлеры и индексы отобранных признаков."""
+    """Загруженная модель утомления, скейлеры и индексы отобранных признаков."""
 
     model: Any
     selected_indices: np.ndarray
@@ -348,7 +348,7 @@ def load_fatigue_assets(
     selected_indices_path: Optional[str] = None,
 ) -> FatigueAssets:
     """
-    Загружает модель усталости, StandardScaler-ы и индексы отобранных признаков.
+    Загружает модель утомления, StandardScaler-ы и индексы отобранных признаков.
 
     Логика совпадает с `load_model_and_normalizers` из `vkr_predict_one_file.ipynb`.
 
@@ -455,7 +455,7 @@ def fatigue_predict_from_audio(
     audio_proc: np.ndarray,
 ) -> Tuple[int, Dict[str, object]]:
     """
-    Предсказание усталости по уже предобработанному аудио (как `predict_single_audio`).
+    Предсказание утомления по уже предобработанному аудио (как `predict_single_audio`).
 
     Аргументы:
         assets: Загруженные модель, скейлеры и индексы признаков.
@@ -500,7 +500,7 @@ def fatigue_predict_level(
     normalization_rms_level: float = 0.1,
 ) -> Tuple[int, Dict[str, object]]:
     """
-    Полный цикл: предобработка фрагмента + инференс модели усталости.
+    Полный цикл: предобработка фрагмента + инференс модели утомления.
 
     Аргументы:
         assets: Результат `load_fatigue_assets`.
@@ -546,7 +546,7 @@ def analyze_one_fragment_mode_b(
 
     Логика:
         1) KWS: определяет, есть ли целевая фраза;
-        2) если фраза есть — fatigue модель определяет класс усталости;
+        2) если фраза есть — fatigue модель определяет класс утомления;
         3) в зависимости от результата печатает информацию в stdout.
 
     Аргументы:
@@ -591,11 +591,11 @@ def analyze_one_fragment_mode_b(
 
     probs = fat_info.get("probs")
     if probs is None:
-        print("есть фраза; усталость: нет данных (пропуск фрагмента)")
+        print("есть фраза; утомление: нет данных (пропуск фрагмента)")
         return
 
     print("есть фраза")
-    print("вероятности классов усталости:")
+    print("вероятности классов утомления:")
     for cls_id in [0, 1, 2]:
         print(f"  {cls_id}: {FATIGUE_CLASS_NAMES[cls_id]} -> {probs[cls_id]:.4f}")
     print(f"выбран класс: {fatigue_class} -> {FATIGUE_CLASS_NAMES[fatigue_class]}")
@@ -612,14 +612,14 @@ def _save_segment_wav(
     """
     Сохраняет 1-секундный аудиофрагмент в WAV-файл.
 
-    Имя файла строится так, чтобы включать метку класса усталости (_0/_1/_2):
+    Имя файла строится так, чтобы включать метку класса утомления (_0/_1/_2):
     в текущей реализации формат: `<stem>_t{start:.3f}_{class_id}.wav`
 
     Аргументы:
         out_dir: Папка для сохранения.
         stem: Имя исходного файла без расширения.
         start_time_sec: Начало фрагмента в общей записи (в секундах).
-        class_id: Метка усталости (0/1/2).
+        class_id: Метка утомления (0/1/2).
         audio_1s: Аудиосигнал фрагмента (1 сек, 1D numpy-массив).
         sr: Частота дискретизации при сохранении (обычно 16000).
 
@@ -638,7 +638,7 @@ def _fatigue_report_message(class_id: int, confidence: float) -> Optional[str]:
     Возвращает текст сообщения для режима a в зависимости от класса и уверенности модели.
 
     Аргументы:
-        class_id: Предсказанный класс (1 — слабая, 2 — сильная усталость).
+        class_id: Предсказанный класс (1 — слабое утомление, 2 — сильное утомление).
         confidence: Вероятность предсказанного класса.
 
     Возвращает:
@@ -646,12 +646,12 @@ def _fatigue_report_message(class_id: int, confidence: float) -> Optional[str]:
     """
     if class_id == 1:
         if confidence < FATIGUE_REPORT_CONFIDENCE_THRESHOLD:
-            return "возможны незначительные признаки слабой усталости"
-        return "зафиксирована слабая усталость"
+            return "возможны незначительные признаки слабого утомления"
+        return "зафиксировано слабое утомление"
     if class_id == 2:
         if confidence < FATIGUE_REPORT_CONFIDENCE_THRESHOLD:
-            return "обнаружено повышение уровня усталости"
-        return "зафиксирована сильная усталость"
+            return "обнаружено повышение уровня утомления"
+        return "зафиксировано сильное утомление"
     return None
 
 
@@ -676,12 +676,12 @@ def analyze_long_audio_mode_a(
 
     Для каждого окна последовательно:
         1) KWS определяет, есть ли фраза;
-        2) если фраза есть — fatigue модель определяет класс усталости;
-        3) если `stop_on_first_strong=True`: печатаются сообщения о слабой/сильной усталости
+        2) если фраза есть — fatigue модель определяет класс утомления;
+        3) если `stop_on_first_strong=True`: печатаются сообщения о слабом/сильном утомлении
            (формулировка зависит от уверенности модели в классе); поиск продолжается,
-           пока не найдена сильная усталость с уверенностью > 0.5 — тогда обработка завершается.
+           пока не найдена сильное утомление с уверенностью > 0.5 — тогда обработка завершается.
 
-    Опционально сохраняет фрагменты с фразой и помеченной усталостью в выбранную папку.
+    Опционально сохраняет фрагменты с фразой и помеченным классом утомления в выбранную папку.
 
     Аргументы:
         wav_path: Путь к длинному аудиофайлу.
@@ -697,8 +697,8 @@ def analyze_long_audio_mode_a(
         normalization_rms_level: RMS уровень для soft-нормализации.
         save_found_fragments: если True — сохраняются фрагменты.
         save_dir: папка для сохранения фрагментов (нужна если `save_found_fragments=True`).
-        stop_on_first_strong: если True — сообщения о усталости и остановка только при сильной
-           усталости с уверенностью > 0.5. Если False — без сообщений и без досрочной остановки.
+        stop_on_first_strong: если True — сообщения об утомлении и остановка только при сильном
+           утомлении с уверенностью > 0.5. Если False — без сообщений и без досрочной остановки.
 
     Возвращает:
         None. Результаты и сообщения печатаются в stdout.
@@ -721,7 +721,7 @@ def analyze_long_audio_mode_a(
     if tqdm is not None and not isinstance(iterable, list):
         pass  # для генератора tqdm требует длину; здесь оставляем без прогресс-бара
 
-    weak_reported = False  # первое сообщение о слабой усталости
+    weak_reported = False  # первое сообщение о слабом утомлении
     strong_elevated_reported = False  # первое сообщение о повышенном уровне (сильная, conf < 0.5)
 
     for idx, (start_time_sec, seg) in enumerate(iterable):
@@ -735,7 +735,7 @@ def analyze_long_audio_mode_a(
             noise_reduction_enabled=noise_reduction_enabled,
             normalization_type=normalization_type,
             normalization_rms_level=normalization_rms_level,
-        )  # Шаг 5..7: fatigue — определение класса усталости
+        )  # Шаг 5..7: fatigue — определение класса утомления
 
         if save_found_fragments:
             assert save_dir is not None
