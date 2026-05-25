@@ -1,0 +1,24 @@
+# Core dependencies for the KWS + Fatigue pipeline
+
+# Deep Learning & Data Processing
+tensorflow>=2.13.0
+numpy>=1.24.0
+joblib>=1.3.0
+
+# Audio Processing
+librosa>=0.10.0
+soundfile>=0.12.0
+noisereduce>=3.0.0
+
+# Utilities & Progress Bar
+tqdm>=4.66.0
+
+# Optional: For the notebook interface
+notebook>=7.0.0
+ipykernel>=6.25.0
+
+# Optional: For console argument parsing (usually part of standard library, but included for completeness)
+# argparse is part of Python standard library
+
+# Note: If you encounter issues with TensorFlow on older hardware,
+# consider adding 'tensorflow-cpu' instead of 'tensorflow'.
